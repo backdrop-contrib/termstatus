@@ -37,7 +37,7 @@ function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id
  */
 function termstatus_taxonomy_term_load($terms) {
   foreach ($terms as $term) {
-    $term->status = 0;
+    $term->status = 1;
   }
 
   $result = db_query('SELECT tid, status FROM {termstatus} WHERE tid IN (:tids)',
