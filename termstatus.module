@@ -12,6 +12,19 @@ function termstatus_help($path, $arg) {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function termstatus_permission() {
+  $perms = array(
+    'view unpublished taxonomy terms' => array(
+      'title' => t('View unpublished taxonomy terms'),
+    ),
+  );
+
+  return $perms;
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
@@ -73,7 +86,23 @@ function termstatus_taxonomy_term_delete($term) {
  * Implements hook_query_TAG_alter().
  */
 function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
-    dsm($query);
+  $tables =& $query->getTables();
+
+  if (!user_access('view unpublished taxonomy terms')) {
+    // Extract taxonomy_term_data tables
+    foreach ($tables as $alias => $table) {
+      if ($table['table'] == 'taxonomy_term_data') {
+        // Add one inner join to termstatus for each taxonomy_term_data
+        // instance
+        $query->leftjoin('termstatus', 'termstatus_' . $alias,
+          $alias . '.tid = termstatus_' . $alias . '.tid');
+        $or = db_or()
+            ->condition('termstatus_' . $alias . '.status', NULL, 'IS NULL')
+            ->condition('termstatus_' . $alias . '.status', 1, '=');
+        $query->condition($or);
+      }
+    }
+  }
 }
 
 /**
