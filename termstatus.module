@@ -25,6 +25,15 @@ function termstatus_permission() {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function termstatus_views_api() {
+  return array(
+    'api' => 2,
+  );
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
