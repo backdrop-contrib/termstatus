@@ -34,6 +34,28 @@ function termstatus_views_api() {
 }
 
 /**
+ * Implements hook_action_info().
+ */
+function termstatus_action_info() {
+  return array(
+    'termstatus_publish_action' => array(
+      'type' => 'taxonomy_term',
+      'label' => t('Publish taxonomy term'),
+      'configurable' => FALSE,
+      'behavior' => array('changes_property'),
+      'triggers' => array('taxonomy_term_presave', 'taxonomy_term_insert', 'taxonomy_term_update', 'taxonomy_term_delete'),
+    ),
+    'termstatus_unpublish_action' => array(
+      'type' => 'taxonomy_term',
+      'label' => t('Unpublish taxonomy term'),
+      'configurable' => FALSE,
+      'behavior' => array('changes_property'),
+      'triggers' => array('taxonomy_term_presave', 'taxonomy_term_insert', 'taxonomy_term_update', 'taxonomy_term_delete'),
+    ),
+  );
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
@@ -112,6 +134,22 @@ function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
       }
     }
   }
+}
+
+/**
+ * Action callback: publish a term
+ */
+function termstatus_publish_action($term, $context = array()) {
+  $term->status = 1;
+  watchdog('action', 'Set taxonomy term %title to published.', array('%title' => $term->name));
+}
+
+/**
+ * action callback: unpublish a term
+ */
+function termstatus_unpublish_action($term, $context = array()) {
+  $term->status = 0;
+  watchdog('action', 'Set taxonomy term %title to unpublished.', array('%title' => $term->name));
 }
 
 /**
