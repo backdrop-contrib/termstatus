@@ -1,0 +1,96 @@
+<?php
+
+/**
+ * Implements hook_help().
+ */
+function termstatus_help($path, $arg) {
+  switch ($path) {
+    // Main module help for the block module
+    case 'admin/help#termstatus':
+      return '<p>' . t('Provides a checkbox on the term edit form in order to set the publishing state.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
+  $term = $form_state['term'];
+
+  $form['termstatus'] = array(
+    '#type' => 'fieldset',
+    '#access' => user_access('administer taxonomy'),
+    '#title' => t('Publishing options'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#weight' => 95,
+  );
+  $form['termstatus']['status'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Published'),
+    '#default_value' => $term->status,
+  );
+}
+
+/**
+ * Implements hook_taxonomy_term_load().
+ */
+function termstatus_taxonomy_term_load($terms) {
+  foreach ($terms as $term) {
+    $term->status = 0;
+  }
+
+  $result = db_query('SELECT tid, status FROM {termstatus} WHERE tid IN (:tids)',
+    array(':tids' => array_keys($terms)));
+
+  foreach ($result as $record) {
+    $terms[$record->tid]->status = $record->status;
+  }
+}
+
+/**
+ * Implements hook_taxonomy_term_insert().
+ */
+function termstatus_taxonomy_term_insert($term) {
+  termstatus_term_save($term);
+}
+
+/**
+ * Implements hook_taxonomy_term_update().
+ */
+function termstatus_taxonomy_term_update($term) {
+  termstatus_term_save($term);
+}
+
+/**
+ * Implements hook_taxonomy_term_delete().
+ */
+function termstatus_taxonomy_term_delete($term) {
+  termstatus_term_delete($term->tid);
+}
+
+/**
+ * Implements hook_query_TAG_alter().
+ */
+function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
+    dsm($query);
+}
+
+/**
+ * Save the status record of a term
+ */
+function termstatus_term_save($term) {
+  db_merge('termstatus')
+    ->key(array('tid' => $term->tid))
+    ->fields(array(
+      'status' => $term->status,
+    ))
+    ->execute();
+}
+
+/**
+ * Remove the status record of a term
+ */
+function termstatus_term_delete($tid) {
+  db_delete('termstatus')->condition('tid', $tid)->execute();
+}

@@ -1,0 +1,39 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the termstatus module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function termstatus_schema() {
+  $schema['termstatus'] = array(
+    'description' => 'The base table for termstatus.',
+    'fields' => array(
+      'tid' => array(
+        'description' => 'Primary Key: The {taxonomy_term_data}.tid of the term.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'Boolean indicating whether the term is published (visible to non-administrators).',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'primary key' => array('tid'),
+    'term_status' => array('tid', 'status'),
+    'foreign keys' => array(
+      'taxonomy_term_data' => array(
+        'table' => 'taxonomy_term_data',
+        'columns' => array('tid' => 'tid'),
+      ),
+    ),
+  );
+
+  return $schema;
+}
