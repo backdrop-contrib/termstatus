@@ -31,6 +31,13 @@ function termstatus_requirements($phase) {
       'severity' => REQUIREMENT_WARNING,
     );
   }
+  else {
+    $requirements['taxonomy_term_status'] = array(
+      'title' => $t('Taxonomy Term Status'),
+      'value' => $t('Term status is configured and active. If the site is experiencing problems with visibility of taxonomy terms, you may have to rebuild the term status records using the <a href="@config_link">configuration page</a>.', array('@config_link' => url('admin/config/system/termstatus'))),
+      'severity' => REQUIREMENT_OK,
+    );
+  }
 
   return $requirements;
 }
