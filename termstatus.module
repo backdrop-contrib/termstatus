@@ -12,6 +12,21 @@ function termstatus_help($path, $arg) {
 }
 
 /**
+ * Implements hook_menu().
+ */
+function termstatus_menu() {
+  $items['admin/config/system/termstatus'] = array(
+    'title' => 'Taxonomy Term Status',
+    'description' => 'Control and rebuild taxonomy term status records',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('termstatus_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'termstatus.admin.inc',
+  );
+  return $items;
+}
+
+/**
  * Implements hook_permission().
  */
 function termstatus_permission() {
@@ -119,7 +134,8 @@ function termstatus_taxonomy_term_delete($term) {
 function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
   $tables =& $query->getTables();
 
-  if (!user_access('view unpublished taxonomy terms')) {
+  if (variable_get('taxonomy_term_status_enable', FALSE) &&
+    !user_access('view unpublished taxonomy terms')) {
     // Extract taxonomy_term_data tables
     foreach ($tables as $alias => $table) {
       if ($table['table'] == 'taxonomy_term_data') {
@@ -127,10 +143,7 @@ function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
         // instance
         $query->leftjoin('termstatus', 'termstatus_' . $alias,
           $alias . '.tid = termstatus_' . $alias . '.tid');
-        $or = db_or()
-            ->condition('termstatus_' . $alias . '.status', NULL, 'IS NULL')
-            ->condition('termstatus_' . $alias . '.status', 1, '=');
-        $query->condition($or);
+        $query->condition('termstatus_' . $alias . '.status', 1, '=');
       }
     }
   }
