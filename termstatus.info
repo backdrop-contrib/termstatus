@@ -1,4 +1,5 @@
-name = Term Status
+name = Taxonomy Term Status
 description = Add a published/unpublished status field to taxonomy terms
 core = 7.x
 dependencies[] = "taxonomy"
+configure = admin/config/system/termstatus
