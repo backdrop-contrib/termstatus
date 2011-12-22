@@ -88,6 +88,7 @@ function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id
     '#type' => 'checkbox',
     '#title' => t('Published'),
     '#default_value' => $term->status,
+    '#description' => t('Only privileged users are allowed to view a taxonomy term if this option is disabled'),
   );
 }
 
