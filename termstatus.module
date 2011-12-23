@@ -87,9 +87,40 @@ function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id
   $form['termstatus']['status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Published'),
-    '#default_value' => $term->status,
+    '#default_value' => termstatus_term_getstatus($term),
     '#description' => t('Only privileged users are allowed to view a taxonomy term if this option is disabled'),
   );
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function termstatus_form_taxonomy_form_vocabulary_alter(&$form, &$form_state, $form_id) {
+  $vocabulary = $form_state['vocabulary'];
+
+  $form['termstatus'] = array(
+    '#type' => 'fieldset',
+    '#access' => user_access('administer taxonomy'),
+    '#title' => t('Default publishing options'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#weight' => 95,
+  );
+  $form['termstatus']['termstatus_default_status'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Published'),
+    '#default_value' => variable_get('taxonomy_termstatus_default_' . $vocabulary->machine_name, TRUE),
+    '#description' => t('Users with the <em>Administer vocabularies and terms</em> permission will be able to override this option for each term.'),
+  );
+  $form['#submit'][] = 'termstatus_form_taxonomy_form_vocabulary_submit';
+}
+
+/**
+ * Form submit handler for taxonomy vocabulary form
+ */
+function termstatus_form_taxonomy_form_vocabulary_submit($form, &$form_state) {
+  $vocabulary = $form_state['vocabulary'];
+  variable_set('taxonomy_termstatus_default_' . $vocabulary->machine_name, $form_state['values']['termstatus_default_status']);
 }
 
 /**
@@ -97,7 +128,7 @@ function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id
  */
 function termstatus_taxonomy_term_load($terms) {
   foreach ($terms as $term) {
-    $term->status = 1;
+    $term->status = termstatus_term_getstatus($term);
   }
 
   $result = db_query('SELECT tid, status FROM {termstatus} WHERE tid IN (:tids)',
@@ -170,10 +201,11 @@ function termstatus_unpublish_action($term, $context = array()) {
  * Save the status record of a term
  */
 function termstatus_term_save($term) {
+  $status = termstatus_term_getstatus($term);
   db_merge('termstatus')
     ->key(array('tid' => $term->tid))
     ->fields(array(
-      'status' => $term->status,
+      'status' => $status,
     ))
     ->execute();
 }
@@ -183,4 +215,12 @@ function termstatus_term_save($term) {
  */
 function termstatus_term_delete($tid) {
   db_delete('termstatus')->condition('tid', $tid)->execute();
+}
+
+/**
+ * Return the term status of a given term, defaulting to the vocabulary.
+ */
+function termstatus_term_getstatus($term) {
+  return isset($term->status) ? $term->status :
+    variable_get('taxonomy_termstatus_default_' . $term->vocabulary_machine_name, TRUE);
 }
