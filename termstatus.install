@@ -12,7 +12,7 @@
  * their terms disappear when enabling the module.
  */
 function termstatus_enable() {
-  set_variable('taxonomy_term_status_enable', FALSE);
+  variable_set('taxonomy_term_status_enable', FALSE);
 }
 
 /**
