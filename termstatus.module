@@ -182,6 +182,21 @@ function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
 }
 
 /**
+ * Return true if the given account has access to the specified term.
+ */
+function termstatus_term_access($term, $account = NULL) {
+  if (variable_get('taxonomy_term_status_enable', FALSE) &&
+    !user_access('view unpublished taxonomy terms', $account)) {
+    $result = db_query('SELECT status FROM {termstatus} where tid = :tid',
+      array(':tid', $term->tid));
+    return $result->fetchField();
+  }
+  else {
+    return user_access('access content', $account);
+  }
+}
+
+/**
  * Action callback: publish a term
  */
 function termstatus_publish_action($term, $context = array()) {
