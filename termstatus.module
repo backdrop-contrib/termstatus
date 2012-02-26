@@ -189,7 +189,7 @@ function termstatus_term_access($term, $account = NULL) {
   if (variable_get('taxonomy_term_status_enable', FALSE) &&
     !user_access('view unpublished taxonomy terms', $account)) {
     $result = db_query('SELECT status FROM {termstatus} where tid = :tid',
-      array(':tid', $term->tid));
+      array(':tid' => $term->tid));
     return $result->fetchField();
   }
   else {
