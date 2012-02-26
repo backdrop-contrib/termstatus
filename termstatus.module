@@ -167,7 +167,8 @@ function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
   $tables =& $query->getTables();
 
   if (variable_get('taxonomy_term_status_enable', FALSE) &&
-    !user_access('view unpublished taxonomy terms')) {
+    !user_access('view unpublished taxonomy terms') &&
+    !$query->hasTag('status_unpublished')) {
     // Extract taxonomy_term_data tables
     foreach ($tables as $alias => $table) {
       if ($table['table'] == 'taxonomy_term_data') {
