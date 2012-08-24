@@ -16,6 +16,13 @@ function termstatus_enable() {
 }
 
 /**
+ * Implements hook_uninstall().
+ */
+function termstatus_uninstall() {
+  variable_del('taxonomy_term_status_enable');
+}
+
+/**
  * Implements hook_requirements().
  */
 function termstatus_requirements($phase) {
