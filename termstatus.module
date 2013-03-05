@@ -71,6 +71,20 @@ function termstatus_action_info() {
 }
 
 /**
+ * Implements hook_entity_property_info_alter().
+ */
+function termstatus_entity_property_info_alter(&$entity_info) {
+  $entity_info['taxonomy_term']['properties']['status'] = array(
+    'label' => t("Status"),
+    'description' => t("Whether the taxonomy term is published or unpublished."),
+    'setter callback' => 'entity_property_verbatim_set',
+    'type' => 'integer',
+    'options list' => 'entity_metadata_status_options_list',
+    'access permission' => 'administer taxonomy',
+  );
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
