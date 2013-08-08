@@ -5,7 +5,7 @@
  */
 function termstatus_settings($form, &$form_state) {
   $count = _termstatus_count_nullstatus();
-  $enabled = variable_get('taxonomy_term_status_enable', FALSE);
+  $enabled = variable_get('termstatus_enable', FALSE);
 
   if ($count) {
     $form['message'] = array(
@@ -13,7 +13,7 @@ function termstatus_settings($form, &$form_state) {
     );
   }
 
-  $form['taxonomy_term_status_enable'] = array(
+  $form['termstatus_enable'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable term status'),
     '#description' => t('If enabled, unpublished taxonomy terms are hidden'),

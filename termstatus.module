@@ -123,7 +123,7 @@ function termstatus_form_taxonomy_form_vocabulary_alter(&$form, &$form_state, $f
   $form['termstatus']['termstatus_default_status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Published'),
-    '#default_value' => variable_get('taxonomy_termstatus_default_' . $vocabulary->machine_name, TRUE),
+    '#default_value' => variable_get('termstatus_default_' . $vocabulary->machine_name, TRUE),
     '#description' => t('Users with the <em>Administer vocabularies and terms</em> permission will be able to override this option for each term.'),
   );
   $form['#submit'][] = 'termstatus_form_taxonomy_form_vocabulary_submit';
@@ -134,7 +134,7 @@ function termstatus_form_taxonomy_form_vocabulary_alter(&$form, &$form_state, $f
  */
 function termstatus_form_taxonomy_form_vocabulary_submit($form, &$form_state) {
   $vocabulary = $form_state['vocabulary'];
-  variable_set('taxonomy_termstatus_default_' . $vocabulary->machine_name, $form_state['values']['termstatus_default_status']);
+  variable_set('termstatus_default_' . $vocabulary->machine_name, $form_state['values']['termstatus_default_status']);
 }
 
 /**
@@ -180,7 +180,7 @@ function termstatus_taxonomy_term_delete($term) {
 function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
   $tables =& $query->getTables();
 
-  if (variable_get('taxonomy_term_status_enable', FALSE) &&
+  if (variable_get('termstatus_enable', FALSE) &&
     !user_access('view unpublished taxonomy terms') &&
     !$query->hasTag('status_unpublished')) {
     // Extract taxonomy_term_data tables
@@ -200,7 +200,7 @@ function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
  * Return true if the given account has access to the specified term.
  */
 function termstatus_term_access($term, $account = NULL) {
-  if (variable_get('taxonomy_term_status_enable', FALSE) &&
+  if (variable_get('termstatus_enable', FALSE) &&
     !user_access('view unpublished taxonomy terms', $account)) {
     $result = db_query('SELECT status FROM {termstatus} where tid = :tid',
       array(':tid' => $term->tid));
@@ -252,5 +252,5 @@ function termstatus_term_delete($tid) {
  */
 function termstatus_term_getstatus($term) {
   return isset($term->status) ? $term->status :
-    variable_get('taxonomy_termstatus_default_' . $term->vocabulary_machine_name, TRUE);
+    variable_get('termstatus_default_' . $term->vocabulary_machine_name, TRUE);
 }
