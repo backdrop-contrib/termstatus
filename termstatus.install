@@ -27,10 +27,10 @@ function termstatus_uninstall() {
  */
 function termstatus_requirements($phase) {
   $requirements = array();
-  // Ensure translations don't break at install time
+  // Ensure translations don't break at install time.
   $t = get_t();
 
-  // Check if term status is enabled
+  // Check if term status is enabled.
   if (!variable_get('termstatus_enable', FALSE)) {
     $requirements['taxonomy_term_status'] = array(
       'title' => $t('Taxonomy Term Status'),
