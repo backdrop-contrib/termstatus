@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Taxonomy term status test stub module.
+ */
+
+/**
  * Implements hook_menu().
  */
 function termstatus_test_menu() {

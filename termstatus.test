@@ -14,7 +14,7 @@ class TermstatusWebTestCase extends DrupalWebTestCase {
   /**
    * Returns a new vocabulary with random properties.
    */
-  function createVocabulary() {
+  protected function createVocabulary() {
     // Create a vocabulary.
     $vocabulary = new stdClass();
     $vocabulary->name = $this->randomName();
@@ -30,7 +30,7 @@ class TermstatusWebTestCase extends DrupalWebTestCase {
   /**
    * Returns a new term with random properties in vocabulary $vid.
    */
-  function createTerm($vocabulary) {
+  protected function createTerm($vocabulary) {
     $term = new stdClass();
     $term->name = $this->randomName();
     $term->description = $this->randomName();
@@ -120,6 +120,10 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
  * Tests the administrative user interface.
  */
 class TermstatusAdminTestCase extends TermstatusWebTestCase {
+
+  /**
+   * Return info about test case.
+   */
   public static function getInfo() {
     return array(
       'name' => 'Administrative Interface',
@@ -142,21 +146,21 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $admin = $this->drupalCreateUser(array('administer taxonomy'));
     $this->drupalLogin($admin);
 
-    // Test default behavior (default: published)
+    // Test default behavior (default: published).
     variable_del('termstatus_default_tags');
     $this->drupalGet('admin/structure/taxonomy/tags/edit');
     $this->assertFieldChecked('edit-termstatus-default-status', 'Default publishing status should be enabled by default.');
     $this->drupalGet('admin/structure/taxonomy/tags/add');
     $this->assertFieldChecked('edit-status', 'Publishing status on term should be checked.');
 
-    // Set default to published
+    // Set default to published.
     $edit = array('termstatus_default_status' => TRUE);
     $this->drupalPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
     $this->assertEqual(1, variable_get('termstatus_default_tags'), 'Default publishing status for vocabulary should be saved in the proper variable when enabled.');
     $this->drupalGet('admin/structure/taxonomy/tags/add');
     $this->assertFieldChecked('edit-status', 'Publishing status on term should be checked.');
 
-    // Set default to unpublished
+    // Set default to unpublished.
     $edit = array('termstatus_default_status' => FALSE);
     $this->drupalPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
     $this->assertEqual(0, variable_get('termstatus_default_tags'), 'Default publishing status for vocabulary should be saved in the proper variable when disabled.');
@@ -171,7 +175,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $admin = $this->drupalCreateUser(array('administer taxonomy'));
     $this->drupalLogin($admin);
 
-    // Add published term
+    // Add published term.
     $name = $this->randomName(8);
     $edit = array(
       'name' => $name,
@@ -183,7 +187,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $term = reset($terms);
     $this->assertTrue($term->status, 'The status of the term is set to published when added.');
 
-    // Edit published term and depublish it
+    // Edit published term and depublish it.
     $edit = array(
       'status' => FALSE,
     );
@@ -191,7 +195,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $term = entity_load_unchanged('taxonomy_term', $term->tid);
     $this->assertFalse($term->status, 'The status of the term is set to unpublished after edit.');
 
-    // Add unpublished term
+    // Add unpublished term.
     $name = $this->randomName(8);
     $edit = array(
       'name' => $name,
@@ -203,7 +207,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $term = reset($terms);
     $this->assertFalse($term->status, 'The status of the term is set to unpublished');
 
-    // Edit unpublished term and publish it
+    // Edit unpublished term and publish it.
     $edit = array(
       'status' => TRUE,
     );
@@ -214,13 +218,16 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
 }
 
 /**
- * Tests the access control features
+ * Tests the access control features.
  */
 class TermstatusAccessTestCase extends TermstatusWebTestCase {
   protected $vocabulary;
   protected $publishedTerm;
   protected $unpublishedTerm;
 
+  /**
+   * Return info about test case.
+   */
   public static function getInfo() {
     return array(
       'name' => 'Access control',
