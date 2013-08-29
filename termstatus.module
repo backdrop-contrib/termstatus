@@ -152,6 +152,15 @@ function termstatus_form_taxonomy_form_vocabulary_submit($form, &$form_state) {
 }
 
 /**
+ * Implemens hook_preprocess_HOOK().
+ */
+function termstatus_preprocess_taxonomy_term(&$variables) {
+  if (isset($variables['term']->status) && empty($variables['term']->status)) {
+    $variables['classes_array'][] = 'term-unpublished';
+  }
+}
+
+/**
  * Implements hook_taxonomy_term_load().
  */
 function termstatus_taxonomy_term_load($terms) {
