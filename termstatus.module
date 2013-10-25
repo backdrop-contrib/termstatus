@@ -102,6 +102,11 @@ function termstatus_entity_property_info_alter(&$entity_info) {
  * Implements hook_form_FORM_ID_alter().
  */
 function termstatus_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
+  // Do not show termstatus settings on delete confirmation form.
+  if (!empty($form_state['confirm_delete'])) {
+    return;
+  }
+
   $term = $form_state['term'];
 
   $form['termstatus'] = array(
