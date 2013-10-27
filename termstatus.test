@@ -137,6 +137,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
    */
   public function setUp() {
     parent::setUp(array('termstatus'));
+    variable_set('termstatus_enable', TRUE);
   }
 
   /**
