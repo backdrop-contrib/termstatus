@@ -300,5 +300,40 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     $this->drupalGet('termstatus-test-term-list/' . $this->vocabulary->vid);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for privileged user');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is in term listing for privileged user');
+
+    $admin = $this->drupalCreateUser(array('administer taxonomy'));
+    $this->drupalLogin($admin);
+
+    $this->drupalGet('taxonomy/term/' . $this->publishedTerm->tid);
+    $this->assertResponse(200, 'Admin can access published term');
+    $this->drupalGet('taxonomy/term/' . $this->unpublishedTerm->tid);
+    $this->assertResponse(200, 'Admin can access unpublished term');
+
+    $this->drupalGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for admin');
+    $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is in term listing for admin');
+  }
+
+  /**
+   * Test that api function for unpublished terms.
+   */
+  public function testAPIFunctionForUnpublishedTerms() {
+    $guest = drupal_anonymous_user();
+    $result = termstatus_term_access($this->publishedTerm, $guest);
+    $this->assertTrue($result, 'Anonymous is granted access to published term');
+    $result = termstatus_term_access($this->unpublishedTerm, $guest);
+    $this->assertFalse($result, 'Anonymous is denied access to unpublished term');
+
+    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
+    $result = termstatus_term_access($this->publishedTerm, $editor);
+    $this->assertTrue($result, 'Privileged user is granted access to published term');
+    $result = termstatus_term_access($this->unpublishedTerm, $editor);
+    $this->assertTrue($result, 'Privileged user is granted access to unpublished term');
+
+    $admin = $this->drupalCreateUser(array('administer taxonomy'));
+    $result = termstatus_term_access($this->publishedTerm, $admin);
+    $this->assertTrue($result, 'Admin is granted access to published term');
+    $result = termstatus_term_access($this->unpublishedTerm, $admin);
+    $this->assertTrue($result, 'Admin is granted access to unpublished term');
   }
 }
