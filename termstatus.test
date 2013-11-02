@@ -114,6 +114,24 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
     $req = reset($termstatus_requirements);
     $this->assertEqual($req['severity'], REQUIREMENT_OK, 'Severity of requirement record should be "ok" after "termstatus_enable" variable has been manipulated.');
   }
+
+  /**
+   * Tests the first-use-safeguard mechanism when no terms are present.
+   */
+  public function testFirstUseSafeguardNoTerms() {
+    // Make sure variable termstatus_enable does not exist.
+    variable_del('termstatus_enable');
+
+    module_enable(array('termstatus'));
+
+    // Reset/rebuild all data structures after enabling the modules.
+    $this->resetAll();
+
+    // Safeguard against unpublished terms: Variable termstatus_enable should
+    // be set to TRUE when no terms were present at the point of time, the
+    // module has been enabled.
+    $this->assertIdentical(TRUE, variable_get('termstatus_enable'), 'Variable termstatus_enable should be set to true after module is enabled, when no terms are present in the database.');
+  }
 }
 
 /**

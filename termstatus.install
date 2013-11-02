@@ -9,10 +9,12 @@
  * Implemets hook_enable().
  *
  * Disable term status per default in order to protect people from having all
- * their terms disappear when enabling the module.
+ * their terms disappear when enabling the module. Do not disable the module
+ * when installing into a pristine system - i.e. when there are no terms.
  */
 function termstatus_enable() {
-  variable_set('termstatus_enable', FALSE);
+  $any_tid = db_query('SELECT tid FROM {taxonomy_term_data} LIMIT 1')->fetchField();
+  variable_set('termstatus_enable', empty($any_tid));
 }
 
 /**
