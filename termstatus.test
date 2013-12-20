@@ -336,4 +336,61 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     $result = termstatus_term_access($this->unpublishedTerm, $admin);
     $this->assertTrue($result, 'Admin is granted access to unpublished term');
   }
+
+  /**
+   * Test visibility of unpublished terms in menu.
+   */
+  public function testVisibilityOfMenuLinksForPrivilegedUser() {
+    $published_menu_link = array(
+      'link_path' => 'taxonomy/term/' . $this->publishedTerm->tid,
+      'link_title' => $this->publishedTerm->name,
+      'menu_name' => 'main-menu',
+    );
+    $unpublished_menu_link = array(
+      'link_path' => 'taxonomy/term/' . $this->unpublishedTerm->tid,
+      'link_title' => $this->unpublishedTerm->name,
+      'menu_name' => 'main-menu',
+    );
+    menu_link_save($published_menu_link);
+    menu_link_save($unpublished_menu_link);
+
+    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
+    $this->drupalLogin($editor);
+
+    $this->drupalGet('node');
+
+    $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Menu link for published term is visible');
+    $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is visible');
+
+    $admin = $this->drupalCreateUser(array('administer taxonomy'));
+    $this->drupalLogin($admin);
+
+    $this->drupalGet('node');
+
+    $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Menu link for published term is visible');
+    $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is visible');
+  }
+
+  /**
+   * Test visibility of unpublished terms in menu.
+   */
+  public function testVisibilityOfMenuLinksForGuest() {
+    $published_menu_link = array(
+      'link_path' => 'taxonomy/term/' . $this->publishedTerm->tid,
+      'link_title' => $this->publishedTerm->name,
+      'menu_name' => 'main-menu',
+    );
+    $unpublished_menu_link = array(
+      'link_path' => 'taxonomy/term/' . $this->unpublishedTerm->tid,
+      'link_title' => $this->unpublishedTerm->name,
+      'menu_name' => 'main-menu',
+    );
+    menu_link_save($published_menu_link);
+    menu_link_save($unpublished_menu_link);
+
+    $this->drupalGet('node');
+
+    $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Menu link for published term is visible');
+    $this->assertNoLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is not visible');
+  }
 }

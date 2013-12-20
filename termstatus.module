@@ -242,6 +242,35 @@ function termstatus_term_access($term, $account = NULL) {
 }
 
 /**
+ * Implements hook_menu_alter().
+ *
+ * Inject a menu access callback for taxonomy term pages.
+ */
+function termstatus_menu_alter(&$items) {
+  $orig_callback = isset($items['taxonomy/term/%taxonomy_term']['access callback']) ? $items['taxonomy/term/%taxonomy_term']['access callback'] : 'user_access';
+  $orig_arguments = $items['taxonomy/term/%taxonomy_term']['access arguments'];
+  $items['taxonomy/term/%taxonomy_term']['access callback'] = 'termstatus_menu_access';
+  $items['taxonomy/term/%taxonomy_term']['access arguments'] = array(2, $orig_callback, $orig_arguments);
+}
+
+/**
+ * Menu access callback. Return true if access to term is granted.
+ */
+function termstatus_menu_access($term, $orig_callback, $orig_arguments) {
+  if ($orig_callback && !call_user_func_array($orig_callback, $orig_arguments)) {
+    return FALSE;
+  }
+
+  if (variable_get('termstatus_enable', FALSE) &&
+    !user_access('administer taxonomy') &&
+    !user_access('view unpublished taxonomy terms')) {
+    return !empty($term->status);
+  }
+
+  return TRUE;
+}
+
+/**
  * Action callback: publish a term.
  */
 function termstatus_publish_action($term, $context = array()) {
