@@ -394,3 +394,229 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     $this->assertNoLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is not visible');
   }
 }
+
+/**
+ * Tests for various entity field queries.
+ */
+class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
+  protected $vocabulary;
+  protected $publishedTerm;
+  protected $unpublishedTerm;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Entity field query tests',
+      'description' => 'Tests for various entity field queries',
+      'group' => 'Taxonomy Term Status',
+    );
+  }
+
+  public function setUp() {
+    parent::setUp(array('termstatus'));
+    variable_set('termstatus_enable', TRUE);
+
+    $this->vocabulary = taxonomy_vocabulary_machine_name_load('tags');
+
+    variable_set('termstatus_default_tags', 1);
+    $this->publishedTerm = $this->createTerm($this->vocabulary);
+
+    variable_set('termstatus_default_tags', 0);
+    $this->unpublishedTerm = $this->createTerm($this->vocabulary);
+  }
+
+  public function testGuestAccessToTermEFQ() {
+    global $user;
+    $web_user = $this->drupalCreateUser(array('access content'));
+    $this->drupalLogin($web_user);
+    $user = $web_user;
+
+    # Without term_access tag.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'taxonomy_term');
+    $result = $query->execute();
+
+    $expected_tids = array(
+      $this->publishedTerm->tid,
+      $this->unpublishedTerm->tid,
+    );
+    sort($expected_tids);
+    $actual_tids = array_keys($result['taxonomy_term']);
+    sort($actual_tids);
+    $this->assertEqual($expected_tids, $actual_tids, 'All taxonomy terms were retrieved by EntityFieldQuery without term_access tag.');
+
+    # With term_access tag.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'taxonomy_term');
+    $query->addTag('term_access');
+    $result = $query->execute();
+
+    $expected_tids = array($this->publishedTerm->tid);
+    $actual_tids = array_keys($result['taxonomy_term']);
+    $this->assertEqual($expected_tids, $actual_tids, 'Only published taxonomy terms were retrieved by EntityFieldQuery with term_access tag.');
+  }
+
+  public function testPrivilegedAccessToTermEFQ() {
+    global $user;
+    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
+    $this->drupalLogin($editor);
+    $user = $editor;
+
+    # Without term_access tag.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'taxonomy_term');
+    $result = $query->execute();
+
+    $expected_tids = array(
+      $this->publishedTerm->tid,
+      $this->unpublishedTerm->tid,
+    );
+    sort($expected_tids);
+    $actual_tids = array_keys($result['taxonomy_term']);
+    sort($actual_tids);
+    $this->assertEqual($expected_tids, $actual_tids, 'All taxonomy terms were retrieved by EntityFieldQuery without term_access tag for privileged user.');
+
+    # With term_access tag.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'taxonomy_term');
+    $query->addTag('term_access');
+    $result = $query->execute();
+
+    $expected_tids = array(
+      $this->publishedTerm->tid,
+      $this->unpublishedTerm->tid,
+    );
+    sort($expected_tids);
+    $actual_tids = array_keys($result['taxonomy_term']);
+    sort($actual_tids);
+    $this->assertEqual($expected_tids, $actual_tids, 'All taxonomy terms were retrieved by EntityFieldQuery with term_access tag for privileged user.');
+  }
+
+  /**
+   * Tests access to EFQ with entity_type node.
+   *
+   * Note that the query will return all matching nodes regardless of whether a
+   * referenced term is published or not and regardless of the users privileges.
+   * This is due to the fact that the EFQ does not join taxonomy_term_data but
+   * rather field_data_X.
+   *
+   * Note that this test does not cover termstatus features but just documents
+   * EFQ behaviour wrt termstatus and the term_access tag.
+   */
+  public function testAccessToNodeEFQ() {
+    global $user;
+
+    $article_without_term = $this->drupalCreateNode(array('type' => 'article'));
+
+    $settings = array();
+    $settings['type'] = 'article';
+    $settings['field_tags'][LANGUAGE_NONE][0]['tid'] = $this->publishedTerm->tid;
+    $article_with_published_term = $this->drupalCreateNode($settings);
+
+    $settings = array();
+    $settings['type'] = 'article';
+    $settings['field_tags'][LANGUAGE_NONE][0]['tid'] = $this->unpublishedTerm->tid;
+    $article_with_unpublished_term = $this->drupalCreateNode($settings);
+
+    $accounts = array(
+      'web_user' => $this->drupalCreateUser(array('access content')),
+      'editor' => $this->drupalCreateUser(array('view unpublished taxonomy terms')),
+    );
+
+    foreach ($accounts as $type => $account) {
+      $this->verbose(t('Tests for @account_type', array('@account_type', $type)));
+      $this->drupalLogin($account);
+      $user = $account;
+
+      # Without term_access tag (just node_access) without field condition.
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node');
+      $query->addTag('node_access');
+      $query->propertyCondition('nid', array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+        $article_without_term->nid,
+      ), 'IN');
+
+      $result = $query->execute();
+
+      $expected_nids = array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+        $article_without_term->nid,
+      );
+      sort($expected_nids);
+      $actual_nids = array_keys($result['node']);
+      sort($actual_nids);
+      $this->assertEqual($expected_nids, $actual_nids, 'All nodes were retrieved by EntityFieldQuery without term_access tag without any field condition.');
+
+      # With term_access tag (in addition to node_access) without field condition.
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node');
+      $query->addTag('node_access');
+      $query->addTag('term_access');
+      $query->propertyCondition('nid', array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+        $article_without_term->nid,
+      ), 'IN');
+
+      $result = $query->execute();
+
+      $expected_nids = array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+        $article_without_term->nid,
+      );
+      sort($expected_nids);
+      $actual_nids = array_keys($result['node']);
+      sort($actual_nids);
+      $this->assertEqual($expected_nids, $actual_nids, 'All nodes were retrieved by EntityFieldQuery with term_access tag without any field condition.');
+
+      # Without term_access tag (just node_access) with field condition (on existing terms).
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node');
+      $query->addTag('node_access');
+      $query->propertyCondition('nid', array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+        $article_without_term->nid,
+      ), 'IN');
+      $query->fieldCondition('field_tags', 'tid', 0, '>');
+
+      $result = $query->execute();
+
+      $expected_nids = array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+      );
+      sort($expected_nids);
+      $actual_nids = array_keys($result['node']);
+      sort($actual_nids);
+      $this->assertEqual($expected_nids, $actual_nids, 'Nodes with terms were retrieved by EntityFieldQuery without term_access tag with fieldCondition on existing terms.');
+
+      # With term_access tag (in addition to node_access) with field condition (on existing terms).
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node');
+      $query->addTag('node_access');
+      $query->addTag('term_access');
+      $query->propertyCondition('nid', array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+        $article_without_term->nid,
+      ), 'IN');
+      $query->fieldCondition('field_tags', 'tid', 0, '>');
+
+      $result = $query->execute();
+
+      $expected_nids = array(
+        $article_with_published_term->nid,
+        $article_with_unpublished_term->nid,
+      );
+      sort($expected_nids);
+      $actual_nids = array_keys($result['node']);
+      sort($actual_nids);
+      $this->assertEqual($expected_nids, $actual_nids, 'Only node with published term is retrieved by EntityFieldQuery with term_access tag without any join.');
+    }
+  }
+
+}
