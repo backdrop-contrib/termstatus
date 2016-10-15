@@ -5,3 +5,5 @@ dependencies[] = taxonomy
 configure = admin/config/system/termstatus
 files[] = termstatus.migrate.inc
 files[] = termstatus.test
+
+test_dependencies[] = views
