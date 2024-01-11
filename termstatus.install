@@ -78,3 +78,32 @@ function termstatus_schema() {
 
   return $schema;
 }
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function termstatus_update_last_removed() {
+  return 7000;
+}
+
+ /**
+ * Move termstatus settings from variables to config.
+ */
+function termstatus_update_1000() {
+  // Migrate variables to config.
+  $config = config('termstatus.settings');
+  $config->set('termstatus_enable', update_variable_get('termstatus_enable'));
+  $all_vocabularies = taxonomy_get_vocabularies();
+  $defaults = [];
+  foreach ($all_vocabularies as $vocabulary) {
+    $defaults[$vocabulary->machine_name] = update_variable_get('termstatus_default_' . $vocabulary->machine_name, TRUE);
+  }
+  $config->set('termstatus_default', $defaults);
+  $config->save();
+
+  // Delete variables.
+  update_variable_del('termstatus_enable');
+  foreach ($all_vocabularies as $vocabulary) {
+    update_variable_del('termstatus_default_' . $vocabulary->machine_name);
+  }
+}
