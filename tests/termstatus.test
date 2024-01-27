@@ -16,14 +16,14 @@ class TermstatusWebTestCase extends BackdropWebTestCase {
    */
   protected function createVocabulary() {
     // Create a vocabulary.
-    $vocabulary = new stdClass();
+    $vocabulary = entity_create('vocabulary', []);
     $vocabulary->name = $this->randomName();
     $vocabulary->description = $this->randomName();
     $vocabulary->machine_name = backdrop_strtolower($this->randomName());
     $vocabulary->help = '';
     $vocabulary->nodes = array('post' => 'post');
     $vocabulary->weight = mt_rand(0, 10);
-    taxonomy_vocabulary_save($vocabulary);
+    $vocabulary->save();
     return $vocabulary;
   }
 
@@ -31,13 +31,14 @@ class TermstatusWebTestCase extends BackdropWebTestCase {
    * Returns a new term with random properties in vocabulary $vid.
    */
   protected function createTerm($vocabulary) {
-    $term = new stdClass();
+    $term = entity_create('term', []);
     $term->name = $this->randomName();
     $term->description = $this->randomName();
-    // Use the first available text format.
-    $term->format = db_query_range('SELECT format FROM {filter_format}', 0, 1)->fetchField();
+    //Termporary hardcode; this should get changed to backdrop config_get
+    //In D7 it was "first available" from the filter_formats table
+    $term->format = 'full_html';
     $term->vid = $vocabulary->vid;
-    taxonomy_term_save($term);
+    $term->save();
     return $term;
   }
 }
@@ -72,7 +73,9 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
     $this->assertText($term->name, 'Page should contain the term name.');
 
     // Make sure variable termstatus_enable does not exist.
-    variable_del('termstatus_enable');
+    $config = config('termstatus.settings');
+    $config->clear('termstatus_enable');
+    $config->save();
 
     module_enable(array('termstatus'));
 
@@ -81,7 +84,7 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
 
     // Safeguard against unpublished terms: Variable termstatus_enable should
     // be set to FALSE.
-    $this->assertIdentical(FALSE, variable_get('termstatus_enable'), 'Variable termstatus_enable should be set to false after module is enabled');
+    $this->assertIdentical(FALSE, config_get('termstatus.settings', 'termstatus_enable'), 'Variable termstatus_enable should be set to false after module is enabled');
 
     // Ensure that the term is still accessible - even if its publishing state
     // has not changed yet.
@@ -97,7 +100,7 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
     $this->assertEqual($req['severity'], REQUIREMENT_WARNING, 'Severity of requirement record should be "warning".');
 
     // Turn on the variable and test whether the requirements are updated.
-    variable_set('termstatus_enable', TRUE);
+    config_set('termstatus.settings', 'termstatus_enable', 1);
     $termstatus_requirements = module_invoke('termstatus', 'requirements', 'runtime');
     $this->assertEqual(1, count($termstatus_requirements), 'Should report one requirement record');
     $req = reset($termstatus_requirements);
@@ -109,7 +112,9 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
    */
   public function testFirstUseSafeguardNoTerms() {
     // Make sure variable termstatus_enable does not exist.
-    variable_del('termstatus_enable');
+    $config = config('termstatus.settings');
+    $config->clear('termstatus_enable');
+    $config->save();
 
     module_enable(array('termstatus'));
 
@@ -119,7 +124,7 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
     // Safeguard against unpublished terms: Variable termstatus_enable should
     // be set to TRUE when no terms were present at the point of time, the
     // module has been enabled.
-    $this->assertIdentical(TRUE, variable_get('termstatus_enable'), 'Variable termstatus_enable should be set to true after module is enabled, when no terms are present in the database.');
+    $this->assertIdentical(TRUE, config_get('termstatus.settings', 'termstatus_enable'), 'Variable termstatus_enable should be set to true after module is enabled, when no terms are present in the database.');
   }
 }
 
@@ -133,7 +138,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
    */
   public function setUp() {
     parent::setUp(array('termstatus'));
-    variable_set('termstatus_enable', TRUE);
+    config_set('termstatus.settings', 'termstatus_enable', 1);
   }
 
   /**
@@ -144,7 +149,9 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $this->backdropLogin($admin);
 
     // Test default behavior (default: published).
-    variable_del('termstatus_default_tags');
+    $config = config('termstatus.settings');
+    $config->clear('termstatus_default');
+    $config->save();
     $this->backdropGet('admin/structure/taxonomy/tags/edit');
     $this->assertFieldChecked('edit-termstatus-default-status', 'Default publishing status should be enabled by default.');
     $this->backdropGet('admin/structure/taxonomy/tags/add');
@@ -153,14 +160,14 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     // Set default to published.
     $edit = array('termstatus_default_status' => TRUE);
     $this->backdropPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
-    $this->assertEqual(1, variable_get('termstatus_default_tags'), 'Default publishing status for vocabulary should be saved in the proper variable when enabled.');
+    $this->assertEqual(1, config_get('termstatus.settings', 'termstatus_default')['tags'], 'Default publishing status for vocabulary should be saved in the proper variable when enabled.');
     $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertFieldChecked('edit-status', 'Publishing status on term should be checked.');
 
     // Set default to unpublished.
     $edit = array('termstatus_default_status' => FALSE);
     $this->backdropPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
-    $this->assertEqual(0, variable_get('termstatus_default_tags'), 'Default publishing status for vocabulary should be saved in the proper variable when disabled.');
+    $this->assertEqual(0, config_get('termstatus.settings', 'termstatus_default')['tags'], 'Default publishing status for vocabulary should be saved in the proper variable when disabled.');
     $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertNoFieldChecked('edit-status', 'Publishing status on term should not be checked.');
   }
@@ -227,14 +234,15 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
    */
   public function setUp() {
     parent::setUp(array('termstatus', 'termstatus_test'));
-    variable_set('termstatus_enable', TRUE);
+    config_set('termstatus.settings', 'termstatus_enable', 1);
 
     $this->vocabulary = taxonomy_vocabulary_machine_name_load('tags');
-
-    variable_set('termstatus_default_tags', 1);
+    $defaults = [];
+    $defaults['tags'] = 1;
+    config_set('termstatus.settings', 'termstatus_default', $defaults);
     $this->publishedTerm = $this->createTerm($this->vocabulary);
-
-    variable_set('termstatus_default_tags', 0);
+    $defaults['tags'] = 0;
+    config_set('termstatus.settings', 'termstatus_default', $defaults);
     $this->unpublishedTerm = $this->createTerm($this->vocabulary);
   }
 
@@ -372,15 +380,16 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
 
   public function setUp() {
     parent::setUp(array('termstatus'));
-    variable_set('termstatus_enable', TRUE);
+    config_set('termstatus.settings', 'termstatus_enable', 1);
 
     $this->vocabulary = taxonomy_vocabulary_machine_name_load('tags');
 
-    variable_set('termstatus_default_tags', 1);
+    $defaults = [];
+    $defaults['tags'] = 1;
+    config_set('termstatus.settings', 'termstatus_default', $defaults);
     $this->publishedTerm = $this->createTerm($this->vocabulary);
-
-    variable_set('termstatus_default_tags', 0);
-    $this->unpublishedTerm = $this->createTerm($this->vocabulary);
+    $defaults['tags'] = 0;
+    config_set('termstatus.settings', 'termstatus_default', $defaults);
   }
 
   public function testGuestAccessToTermEFQ() {
