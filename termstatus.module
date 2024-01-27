@@ -34,7 +34,7 @@ function termstatus_menu() {
   $items['admin/config/system/termstatus'] = array(
     'title' => 'Taxonomy Term Status',
     'description' => 'Control and rebuild taxonomy term status records',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('termstatus_settings'),
     'access arguments' => array('administer site configuration'),
     'file' => 'termstatus.admin.inc',

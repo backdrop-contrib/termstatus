@@ -10,7 +10,7 @@
  *
  * Copied from taxonomy.test
  */
-class TermstatusWebTestCase extends DrupalWebTestCase {
+class TermstatusWebTestCase extends BackdropWebTestCase {
   /**
    * Returns a new vocabulary with random properties.
    */
@@ -19,9 +19,9 @@ class TermstatusWebTestCase extends DrupalWebTestCase {
     $vocabulary = new stdClass();
     $vocabulary->name = $this->randomName();
     $vocabulary->description = $this->randomName();
-    $vocabulary->machine_name = drupal_strtolower($this->randomName());
+    $vocabulary->machine_name = backdrop_strtolower($this->randomName());
     $vocabulary->help = '';
-    $vocabulary->nodes = array('article' => 'article');
+    $vocabulary->nodes = array('post' => 'post');
     $vocabulary->weight = mt_rand(0, 10);
     taxonomy_vocabulary_save($vocabulary);
     return $vocabulary;
@@ -61,24 +61,13 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
   }
 
   /**
-   * Return info about test case.
-   */
-  public static function getInfo() {
-    return array(
-      'name' => 'First Use Safeguard',
-      'description' => 'Tests the mechanism preventing terms from being unpublished after the module is enabled.',
-      'group' => 'Taxonomy Term Status',
-    );
-  }
-
-  /**
    * Tests the first-use-safeguard mechanism.
    */
   public function testFirstUseSafeguard() {
     $vocabulary = $this->createVocabulary();
     $term = $this->createTerm($vocabulary);
 
-    $this->drupalGet('taxonomy/term/' . $term->tid);
+    $this->backdropGet('taxonomy/term/' . $term->tid);
     $this->assertResponse(200, 'Taxonomy term page should be accessible.');
     $this->assertText($term->name, 'Page should contain the term name.');
 
@@ -96,7 +85,7 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
 
     // Ensure that the term is still accessible - even if its publishing state
     // has not changed yet.
-    $this->drupalGet('taxonomy/term/' . $term->tid);
+    $this->backdropGet('taxonomy/term/' . $term->tid);
     $this->assertResponse(200, 'Taxonomy term page should still be accessible after module was enabled.');
     $this->assertText($term->name, 'Page should contain the term name.');
 
@@ -142,17 +131,6 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
   /**
    * Return info about test case.
    */
-  public static function getInfo() {
-    return array(
-      'name' => 'Administrative Interface',
-      'description' => 'Tests the administrative user interface.',
-      'group' => 'Taxonomy Term Status',
-    );
-  }
-
-  /**
-   * Return info about test case.
-   */
   public function setUp() {
     parent::setUp(array('termstatus'));
     variable_set('termstatus_enable', TRUE);
@@ -162,28 +140,28 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
    * Test alterations of vocabulary edit form.
    */
   public function testPerVocabularyDefaults() {
-    $admin = $this->drupalCreateUser(array('administer taxonomy'));
-    $this->drupalLogin($admin);
+    $admin = $this->backdropCreateUser(array('administer taxonomy'));
+    $this->backdropLogin($admin);
 
     // Test default behavior (default: published).
     variable_del('termstatus_default_tags');
-    $this->drupalGet('admin/structure/taxonomy/tags/edit');
+    $this->backdropGet('admin/structure/taxonomy/tags/edit');
     $this->assertFieldChecked('edit-termstatus-default-status', 'Default publishing status should be enabled by default.');
-    $this->drupalGet('admin/structure/taxonomy/tags/add');
+    $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertFieldChecked('edit-status', 'Publishing status on term should be checked.');
 
     // Set default to published.
     $edit = array('termstatus_default_status' => TRUE);
-    $this->drupalPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
+    $this->backdropPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
     $this->assertEqual(1, variable_get('termstatus_default_tags'), 'Default publishing status for vocabulary should be saved in the proper variable when enabled.');
-    $this->drupalGet('admin/structure/taxonomy/tags/add');
+    $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertFieldChecked('edit-status', 'Publishing status on term should be checked.');
 
     // Set default to unpublished.
     $edit = array('termstatus_default_status' => FALSE);
-    $this->drupalPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
+    $this->backdropPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
     $this->assertEqual(0, variable_get('termstatus_default_tags'), 'Default publishing status for vocabulary should be saved in the proper variable when disabled.');
-    $this->drupalGet('admin/structure/taxonomy/tags/add');
+    $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertNoFieldChecked('edit-status', 'Publishing status on term should not be checked.');
   }
 
@@ -191,8 +169,8 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
    * Test alterations of term edit form.
    */
   public function testAddEditTermPublishingStatus() {
-    $admin = $this->drupalCreateUser(array('administer taxonomy'));
-    $this->drupalLogin($admin);
+    $admin = $this->backdropCreateUser(array('administer taxonomy'));
+    $this->backdropLogin($admin);
 
     // Add published term.
     $name = $this->randomName(8);
@@ -200,7 +178,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
       'name' => $name,
       'status' => TRUE,
     );
-    $this->drupalPost('admin/structure/taxonomy/tags/add', $edit, t('Save'));
+    $this->backdropPost('admin/structure/taxonomy/tags/add', $edit, t('Save'));
     $terms = taxonomy_get_term_by_name($name, 'tags');
     $this->assertEqual(1, count($terms), 'A term has been created');
     $term = reset($terms);
@@ -210,7 +188,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $edit = array(
       'status' => FALSE,
     );
-    $this->drupalPost('taxonomy/term/' . $term->tid . '/edit', $edit, t('Save'));
+    $this->backdropPost('taxonomy/term/' . $term->tid . '/edit', $edit, t('Save'));
     $term = entity_load_unchanged('taxonomy_term', $term->tid);
     $this->assertFalse($term->status, 'The status of the term is set to unpublished after edit.');
 
@@ -220,7 +198,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
       'name' => $name,
       'status' => FALSE,
     );
-    $this->drupalPost('admin/structure/taxonomy/tags/add', $edit, t('Save'));
+    $this->backdropPost('admin/structure/taxonomy/tags/add', $edit, t('Save'));
     $terms = taxonomy_get_term_by_name($name, 'tags');
     $this->assertEqual(1, count($terms), 'A term has been created');
     $term = reset($terms);
@@ -230,7 +208,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $edit = array(
       'status' => TRUE,
     );
-    $this->drupalPost('taxonomy/term/' . $term->tid . '/edit', $edit, t('Save'));
+    $this->backdropPost('taxonomy/term/' . $term->tid . '/edit', $edit, t('Save'));
     $term = entity_load_unchanged('taxonomy_term', $term->tid);
     $this->assertTrue($term->status, 'The status of the term is set to published after edit.');
   }
@@ -243,17 +221,6 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
   protected $vocabulary;
   protected $publishedTerm;
   protected $unpublishedTerm;
-
-  /**
-   * Return info about test case.
-   */
-  public static function getInfo() {
-    return array(
-      'name' => 'Access control',
-      'description' => 'Tests access to unpublished terms',
-      'group' => 'Taxonomy Term Status',
-    );
-  }
 
   /**
    * Return info about test case.
@@ -275,12 +242,12 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
    * Test that access to unpublished terms is denied for guest users.
    */
   public function testGuestAccessToUnpublishedTerms() {
-    $this->drupalGet('taxonomy/term/' . $this->publishedTerm->tid);
+    $this->backdropGet('taxonomy/term/' . $this->publishedTerm->tid);
     $this->assertResponse(200, 'Anonymous user can access published term');
-    $this->drupalGet('taxonomy/term/' . $this->unpublishedTerm->tid);
+    $this->backdropGet('taxonomy/term/' . $this->unpublishedTerm->tid);
     $this->assertResponse(404, 'Anonymous user cannot access unpublished term');
 
-    $this->drupalGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->vid);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for anonymous user');
     $this->assertNoLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is not in term listing for anonymous user');
   }
@@ -289,27 +256,27 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
    * Test that access to unpublished terms is only granted to privileged users.
    */
   public function testPrivilegedAccessToUnpublishedTerms() {
-    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
-    $this->drupalLogin($editor);
+    $editor = $this->backdropCreateUser(array('view unpublished taxonomy terms'));
+    $this->backdropLogin($editor);
 
-    $this->drupalGet('taxonomy/term/' . $this->publishedTerm->tid);
+    $this->backdropGet('taxonomy/term/' . $this->publishedTerm->tid);
     $this->assertResponse(200, 'Privileged user can access published term');
-    $this->drupalGet('taxonomy/term/' . $this->unpublishedTerm->tid);
+    $this->backdropGet('taxonomy/term/' . $this->unpublishedTerm->tid);
     $this->assertResponse(200, 'Privileged user can access unpublished term');
 
-    $this->drupalGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->vid);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for privileged user');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is in term listing for privileged user');
 
-    $admin = $this->drupalCreateUser(array('administer taxonomy'));
-    $this->drupalLogin($admin);
+    $admin = $this->backdropCreateUser(array('administer taxonomy'));
+    $this->backdropLogin($admin);
 
-    $this->drupalGet('taxonomy/term/' . $this->publishedTerm->tid);
+    $this->backdropGet('taxonomy/term/' . $this->publishedTerm->tid);
     $this->assertResponse(200, 'Admin can access published term');
-    $this->drupalGet('taxonomy/term/' . $this->unpublishedTerm->tid);
+    $this->backdropGet('taxonomy/term/' . $this->unpublishedTerm->tid);
     $this->assertResponse(200, 'Admin can access unpublished term');
 
-    $this->drupalGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->vid);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for admin');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is in term listing for admin');
   }
@@ -318,19 +285,19 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
    * Test that api function for unpublished terms.
    */
   public function testAPIFunctionForUnpublishedTerms() {
-    $guest = drupal_anonymous_user();
+    $guest = backdrop_anonymous_user();
     $result = termstatus_term_access($this->publishedTerm, $guest);
     $this->assertTrue($result, 'Anonymous is granted access to published term');
     $result = termstatus_term_access($this->unpublishedTerm, $guest);
     $this->assertFalse($result, 'Anonymous is denied access to unpublished term');
 
-    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
+    $editor = $this->backdropCreateUser(array('view unpublished taxonomy terms'));
     $result = termstatus_term_access($this->publishedTerm, $editor);
     $this->assertTrue($result, 'Privileged user is granted access to published term');
     $result = termstatus_term_access($this->unpublishedTerm, $editor);
     $this->assertTrue($result, 'Privileged user is granted access to unpublished term');
 
-    $admin = $this->drupalCreateUser(array('administer taxonomy'));
+    $admin = $this->backdropCreateUser(array('administer taxonomy'));
     $result = termstatus_term_access($this->publishedTerm, $admin);
     $this->assertTrue($result, 'Admin is granted access to published term');
     $result = termstatus_term_access($this->unpublishedTerm, $admin);
@@ -354,18 +321,18 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     menu_link_save($published_menu_link);
     menu_link_save($unpublished_menu_link);
 
-    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
-    $this->drupalLogin($editor);
+    $editor = $this->backdropCreateUser(array('view unpublished taxonomy terms'));
+    $this->backdropLogin($editor);
 
-    $this->drupalGet('node');
+    $this->backdropGet('node');
 
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Menu link for published term is visible');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is visible');
 
-    $admin = $this->drupalCreateUser(array('administer taxonomy'));
-    $this->drupalLogin($admin);
+    $admin = $this->backdropCreateUser(array('administer taxonomy'));
+    $this->backdropLogin($admin);
 
-    $this->drupalGet('node');
+    $this->backdropGet('node');
 
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Menu link for published term is visible');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is visible');
@@ -388,7 +355,7 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     menu_link_save($published_menu_link);
     menu_link_save($unpublished_menu_link);
 
-    $this->drupalGet('node');
+    $this->backdropGet('node');
 
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Menu link for published term is visible');
     $this->assertNoLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Menu link for unpublished term is not visible');
@@ -402,14 +369,6 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
   protected $vocabulary;
   protected $publishedTerm;
   protected $unpublishedTerm;
-
-  public static function getInfo() {
-    return array(
-      'name' => 'Entity field query tests',
-      'description' => 'Tests for various entity field queries',
-      'group' => 'Taxonomy Term Status',
-    );
-  }
 
   public function setUp() {
     parent::setUp(array('termstatus'));
@@ -426,8 +385,8 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
 
   public function testGuestAccessToTermEFQ() {
     global $user;
-    $web_user = $this->drupalCreateUser(array('access content'));
-    $this->drupalLogin($web_user);
+    $web_user = $this->backdropCreateUser(array('access content'));
+    $this->backdropLogin($web_user);
     $user = $web_user;
 
     # Without term_access tag.
@@ -457,8 +416,8 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
 
   public function testPrivilegedAccessToTermEFQ() {
     global $user;
-    $editor = $this->drupalCreateUser(array('view unpublished taxonomy terms'));
-    $this->drupalLogin($editor);
+    $editor = $this->backdropCreateUser(array('view unpublished taxonomy terms'));
+    $this->backdropLogin($editor);
     $user = $editor;
 
     # Without term_access tag.
@@ -505,26 +464,26 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
   public function testAccessToNodeEFQ() {
     global $user;
 
-    $article_without_term = $this->drupalCreateNode(array('type' => 'article'));
+    $post_without_term = $this->backdropCreateNode(array('type' => 'post'));
 
     $settings = array();
-    $settings['type'] = 'article';
+    $settings['type'] = 'post';
     $settings['field_tags'][LANGUAGE_NONE][0]['tid'] = $this->publishedTerm->tid;
-    $article_with_published_term = $this->drupalCreateNode($settings);
+    $post_with_published_term = $this->backdropCreateNode($settings);
 
     $settings = array();
-    $settings['type'] = 'article';
+    $settings['type'] = 'post';
     $settings['field_tags'][LANGUAGE_NONE][0]['tid'] = $this->unpublishedTerm->tid;
-    $article_with_unpublished_term = $this->drupalCreateNode($settings);
+    $post_with_unpublished_term = $this->backdropCreateNode($settings);
 
     $accounts = array(
-      'web_user' => $this->drupalCreateUser(array('access content')),
-      'editor' => $this->drupalCreateUser(array('view unpublished taxonomy terms')),
+      'web_user' => $this->backdropCreateUser(array('access content')),
+      'editor' => $this->backdropCreateUser(array('view unpublished taxonomy terms')),
     );
 
     foreach ($accounts as $type => $account) {
       $this->verbose(t('Tests for @account_type', array('@account_type', $type)));
-      $this->drupalLogin($account);
+      $this->backdropLogin($account);
       $user = $account;
 
       # Without term_access tag (just node_access) without field condition.
@@ -532,17 +491,17 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
       $query->entityCondition('entity_type', 'node');
       $query->addTag('node_access');
       $query->propertyCondition('nid', array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
-        $article_without_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
+        $post_without_term->nid,
       ), 'IN');
 
       $result = $query->execute();
 
       $expected_nids = array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
-        $article_without_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
+        $post_without_term->nid,
       );
       sort($expected_nids);
       $actual_nids = array_keys($result['node']);
@@ -555,17 +514,17 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
       $query->addTag('node_access');
       $query->addTag('term_access');
       $query->propertyCondition('nid', array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
-        $article_without_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
+        $post_without_term->nid,
       ), 'IN');
 
       $result = $query->execute();
 
       $expected_nids = array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
-        $article_without_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
+        $post_without_term->nid,
       );
       sort($expected_nids);
       $actual_nids = array_keys($result['node']);
@@ -577,17 +536,17 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
       $query->entityCondition('entity_type', 'node');
       $query->addTag('node_access');
       $query->propertyCondition('nid', array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
-        $article_without_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
+        $post_without_term->nid,
       ), 'IN');
       $query->fieldCondition('field_tags', 'tid', 0, '>');
 
       $result = $query->execute();
 
       $expected_nids = array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
       );
       sort($expected_nids);
       $actual_nids = array_keys($result['node']);
@@ -600,17 +559,17 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
       $query->addTag('node_access');
       $query->addTag('term_access');
       $query->propertyCondition('nid', array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
-        $article_without_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
+        $post_without_term->nid,
       ), 'IN');
       $query->fieldCondition('field_tags', 'tid', 0, '>');
 
       $result = $query->execute();
 
       $expected_nids = array(
-        $article_with_published_term->nid,
-        $article_with_unpublished_term->nid,
+        $post_with_published_term->nid,
+        $post_with_unpublished_term->nid,
       );
       sort($expected_nids);
       $actual_nids = array_keys($result['node']);

@@ -1,4 +1,5 @@
+type = module
 name = Taxonomy Term Status Test Stub
 description = Taxonomy Term Status Test Stub
-core = 7.x
+backdrop = 1.x
 hidden = TRUE

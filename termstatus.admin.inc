@@ -40,7 +40,7 @@ function termstatus_settings($form, &$form_state) {
  */
 function termstatus_rebuild_submit($form, &$form_state) {
   _termstatus_rebuild();
-  drupal_set_message(t('Term status rebuild complete.'));
+  backdrop_set_message(t('Term status rebuild complete.'));
 }
 
 /**

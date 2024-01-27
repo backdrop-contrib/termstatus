@@ -1,0 +1,23 @@
+[TermstatusSafeguardTestCase]
+name = Taxonomy Term Status: Safeguard
+description = Tests the mechanism preventing terms from being unpublished.
+group = Taxonomy Term Status
+file = termstatus.test
+
+[TermstatusAdminTestCase]
+name = Taxonomy Term Status: Admin
+description = Tests the administrative interface.
+group = Taxonomy Term Status
+file = termstatus.test
+
+[TermstatusAccessTestCase]
+name = Taxonomy Term Status: Access
+description = Tests the access control features.
+group = Taxonomy Term Status
+file = termstatus.test
+
+[TermstatusQueryTagTestCase]
+name = Taxonomy Term Status: QueryTag
+description = Tests for various entity field queries.
+group = Taxonomy Term Status
+file = termstatus.test
