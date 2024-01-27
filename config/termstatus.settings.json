@@ -1,0 +1,7 @@
+{
+  "_config_name": "termstatus.settings",
+  "termstatus_enable": 0,
+  "termstatus_default": {
+    "tags": 1
+  }
+}

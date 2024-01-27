@@ -4,6 +4,18 @@
  * Hook implementations and API for the taxonomy term status module.
  */
 
+ /**
+ * Implements hook_config_info().
+ */
+function termstatus_config_info() {
+  $prefixes['termstatus.settings'] = [
+    'label' => t('Termstatus Settings'),
+    'group' => t('Configuration'),
+  ];
+
+  return $prefixes;
+}
+
 /**
  * Implements hook_help().
  */
@@ -137,10 +149,11 @@ function termstatus_form_taxonomy_form_vocabulary_alter(&$form, &$form_state, $f
     '#collapsed' => FALSE,
     '#weight' => 95,
   );
+  $default_values = config_get('termstatus.settings', 'termstatus_default');
   $form['termstatus']['termstatus_default_status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Published'),
-    '#default_value' => variable_get('termstatus_default_' . $vocabulary->machine_name, TRUE),
+    '#default_value' => $default_values[$vocabulary->machine_name],
     '#description' => t('Users with the <em>Administer vocabularies and terms</em> permission will be able to override this option for each term.'),
   );
   $form['#submit'][] = 'termstatus_form_taxonomy_form_vocabulary_submit';
@@ -151,7 +164,9 @@ function termstatus_form_taxonomy_form_vocabulary_alter(&$form, &$form_state, $f
  */
 function termstatus_form_taxonomy_form_vocabulary_submit($form, &$form_state) {
   $vocabulary = $form_state['vocabulary'];
-  variable_set('termstatus_default_' . $vocabulary->machine_name, $form_state['values']['termstatus_default_status']);
+  $defaults = config_get('termstatus.settings', 'termstatus_default');
+  $defaults[$vocabulary->machine_name] = $form_state['values']['termstatus_default_status'];
+  config_set('termstatus.settings', 'termstatus_default', $defaults);
 }
 
 /**
@@ -206,7 +221,7 @@ function termstatus_taxonomy_term_delete($term) {
 function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
   $tables =& $query->getTables();
 
-  if (variable_get('termstatus_enable', FALSE) &&
+  if (config_get('termstatus.settings', 'termstatus_enable') &&
     !user_access('administer taxonomy') &&
     !user_access('view unpublished taxonomy terms') &&
     !$query->hasTag('status_unpublished')) {
@@ -227,7 +242,7 @@ function termstatus_query_term_access_alter(QueryAlterableInterface $query) {
  * Return true if the given account has access to the specified term.
  */
 function termstatus_term_access($term, $account = NULL) {
-  if (variable_get('termstatus_enable', FALSE) &&
+  if (config_get('termstatus.settings', 'termstatus_enable') &&
     !user_access('administer taxonomy', $account) &&
     !user_access('view unpublished taxonomy terms', $account)) {
     $result = db_query('SELECT status FROM {termstatus} where tid = :tid',
@@ -259,7 +274,7 @@ function termstatus_menu_access($term, $orig_callback, $orig_arguments) {
     return FALSE;
   }
 
-  if (variable_get('termstatus_enable', FALSE) &&
+  if (config_get('termstatus.settings', 'termstatus_enable') &&
     !user_access('administer taxonomy') &&
     !user_access('view unpublished taxonomy terms')) {
     return !empty($term->status);
@@ -308,6 +323,8 @@ function termstatus_term_delete($tid) {
  * Return the term status of a given term, defaulting to the vocabulary.
  */
 function termstatus_term_getstatus($term) {
+  $defaults = config_get('termstatus.settings', 'termstatus_default');
+
   return isset($term->status) ? $term->status :
-    variable_get('termstatus_default_' . $term->vocabulary_machine_name, TRUE);
+    $defaults[$term->vocabulary];
 }

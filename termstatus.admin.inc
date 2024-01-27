@@ -9,14 +9,14 @@
  */
 function termstatus_settings($form, &$form_state) {
   $count = _termstatus_count_nullstatus();
-  $enabled = variable_get('termstatus_enable', FALSE);
+  $enabled = config_get('termstatus.settings', 'termstatus_enable');
 
   if ($count) {
     $form['message'] = array(
       '#markup' => t('There are %count taxonomy terms which do not have any status setting. You need to rebuild the taxonomy term status records.', array('%count' => $count)),
     );
   }
-
+  $form['#config'] = 'termstatus.settings';
   $form['termstatus_enable'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable term status'),

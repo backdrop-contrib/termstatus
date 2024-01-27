@@ -14,14 +14,7 @@
  */
 function termstatus_enable() {
   $any_tid = db_query('SELECT tid FROM {taxonomy_term_data} LIMIT 1')->fetchField();
-  variable_set('termstatus_enable', empty($any_tid));
-}
-
-/**
- * Implements hook_uninstall().
- */
-function termstatus_uninstall() {
-  variable_del('termstatus_enable');
+  config_set('termstatus.settings', 'termstatus_enable', empty($any_tid));
 }
 
 /**
@@ -34,7 +27,7 @@ function termstatus_requirements($phase) {
 
   if ($phase != 'install') {
     // Check if term status is enabled.
-    if (!variable_get('termstatus_enable', FALSE)) {
+    if (!config_get('termstatus.settings', 'termstatus_enable')) {
       $requirements['taxonomy_term_status'] = array(
         'title' => $t('Taxonomy Term Status'),
         'value' => $t('Term status is not configured yet. First visit the <a href="@config_link">configuration page</a> in order to build the status records and then enable it.', array('@config_link' => url('admin/config/system/termstatus'))),
@@ -84,22 +77,4 @@ function termstatus_schema() {
   );
 
   return $schema;
-}
-
-/**
- * Remove taxonomy_ prefix from variable names.
- */
-function termstatus_update_7000() {
-  if (variable_get('taxonomy_term_status_enable', FALSE)) {
-    variable_set('termstatus_enable', TRUE);
-  }
-  variable_del('taxonomy_term_status_enable');
-
-  $termstatus_vars = db_query("SELECT name FROM {variable} WHERE name LIKE 'taxonomy_termstatus_%'")->fetchCol();
-
-  foreach ($termstatus_vars as $old_name) {
-    $new_name = substr($old_name, 9);
-    variable_set($new_name, variable_get($old_name));
-    variable_del($old_name);
-  }
 }
