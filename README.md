@@ -28,12 +28,12 @@ Bugs and feature requests should be reported in [the Issue Queue](https://github
 Current Maintainers
 -------------------
 
-- [Giant Rabbit](https://github.com/giant-rabbit).
+- [Eli Lisseck](https://github.com/elisseck), [Giant Rabbit](https://github.com/giant-rabbit).
 
 Credits
 -------
 
-- Ported to Backdrop CMS by [Giant Rabbit](https://github.com/giant-rabbit).
+- Ported to Backdrop CMS by [Eli Lisseck](https://github.com/elisseck), [Giant Rabbit](https://github.com/giant-rabbit).
 - Originally written for Drupal by [znerol](https://git.drupalcode.org/znerol).
 
 License
