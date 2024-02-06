@@ -16,14 +16,13 @@ class TermstatusWebTestCase extends BackdropWebTestCase {
    */
   protected function createVocabulary() {
     // Create a vocabulary.
-    $vocabulary = entity_create('vocabulary', []);
-    $vocabulary->name = $this->randomName();
-    $vocabulary->description = $this->randomName();
-    $vocabulary->machine_name = backdrop_strtolower($this->randomName());
-    $vocabulary->help = '';
-    $vocabulary->nodes = array('post' => 'post');
-    $vocabulary->weight = mt_rand(0, 10);
-    $vocabulary->save();
+    $vocabulary = new TaxonomyVocabulary([
+      'name' => $this->randomName(),
+      'description' => $this->randomName(),
+      'machine_name' => backdrop_strtolower($this->randomName())
+    ]);
+    taxonomy_vocabulary_save($vocabulary);
+
     return $vocabulary;
   }
 
@@ -31,13 +30,13 @@ class TermstatusWebTestCase extends BackdropWebTestCase {
    * Returns a new term with random properties in vocabulary $vid.
    */
   protected function createTerm($vocabulary) {
-    $term = entity_create('term', []);
+    $term = entity_create('taxonomy_term', []);
     $term->name = $this->randomName();
     $term->description = $this->randomName();
     //Termporary hardcode; this should get changed to backdrop config_get
     //In D7 it was "first available" from the filter_formats table
     $term->format = 'full_html';
-    $term->vid = $vocabulary->vid;
+    $term->vocabulary = $vocabulary->machine_name;
     $term->save();
     return $term;
   }
@@ -58,7 +57,7 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
    * Enable the taxonomy module.
    */
   public function setUp() {
-    parent::setUp(array('taxonomy'));
+    parent::setUp(['taxonomy']);
   }
 
   /**
@@ -66,16 +65,13 @@ class TermstatusSafeguardTestCase extends TermstatusWebTestCase {
    */
   public function testFirstUseSafeguard() {
     $vocabulary = $this->createVocabulary();
+    $defaults[$vocabulary->machine_name] = 1;
+    config_set('termstatus.settings', 'termstatus_default', $defaults);
     $term = $this->createTerm($vocabulary);
 
     $this->backdropGet('taxonomy/term/' . $term->tid);
     $this->assertResponse(200, 'Taxonomy term page should be accessible.');
     $this->assertText($term->name, 'Page should contain the term name.');
-
-    // Make sure variable termstatus_enable does not exist.
-    $config = config('termstatus.settings');
-    $config->clear('termstatus_enable');
-    $config->save();
 
     module_enable(array('termstatus'));
 
@@ -139,6 +135,7 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
   public function setUp() {
     parent::setUp(array('termstatus'));
     config_set('termstatus.settings', 'termstatus_enable', 1);
+    config_set('termstatus.settings', 'termstatus_default', ['tags' => 1]);
   }
 
   /**
@@ -149,9 +146,6 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     $this->backdropLogin($admin);
 
     // Test default behavior (default: published).
-    $config = config('termstatus.settings');
-    $config->clear('termstatus_default');
-    $config->save();
     $this->backdropGet('admin/structure/taxonomy/tags/edit');
     $this->assertFieldChecked('edit-termstatus-default-status', 'Default publishing status should be enabled by default.');
     $this->backdropGet('admin/structure/taxonomy/tags/add');
@@ -160,14 +154,15 @@ class TermstatusAdminTestCase extends TermstatusWebTestCase {
     // Set default to published.
     $edit = array('termstatus_default_status' => TRUE);
     $this->backdropPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
-    $this->assertEqual(1, config_get('termstatus.settings', 'termstatus_default')['tags'], 'Default publishing status for vocabulary should be saved in the proper variable when enabled.');
+    $defaults = config_get('termstatus.settings', 'termstatus_default');
+    $this->assertEqual(1, $defaults['tags'], 'Default publishing status for vocabulary should be saved in the proper variable when enabled.');
     $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertFieldChecked('edit-status', 'Publishing status on term should be checked.');
 
     // Set default to unpublished.
     $edit = array('termstatus_default_status' => FALSE);
     $this->backdropPost('admin/structure/taxonomy/tags/edit', $edit, t('Save'));
-    $this->assertEqual(0, config_get('termstatus.settings', 'termstatus_default')['tags'], 'Default publishing status for vocabulary should be saved in the proper variable when disabled.');
+    $this->assertEqual(0, $defaults['tags'], 'Default publishing status for vocabulary should be saved in the proper variable when disabled.');
     $this->backdropGet('admin/structure/taxonomy/tags/add');
     $this->assertNoFieldChecked('edit-status', 'Publishing status on term should not be checked.');
   }
@@ -235,6 +230,7 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
   public function setUp() {
     parent::setUp(array('termstatus', 'termstatus_test'));
     config_set('termstatus.settings', 'termstatus_enable', 1);
+    config_set('termstatus.settings', 'termstatus_default', ['tags' => 1]);
 
     $this->vocabulary = taxonomy_vocabulary_machine_name_load('tags');
     $defaults = [];
@@ -255,7 +251,7 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     $this->backdropGet('taxonomy/term/' . $this->unpublishedTerm->tid);
     $this->assertResponse(404, 'Anonymous user cannot access unpublished term');
 
-    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->machine_name);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for anonymous user');
     $this->assertNoLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is not in term listing for anonymous user');
   }
@@ -272,7 +268,7 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     $this->backdropGet('taxonomy/term/' . $this->unpublishedTerm->tid);
     $this->assertResponse(200, 'Privileged user can access unpublished term');
 
-    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->machine_name);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for privileged user');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is in term listing for privileged user');
 
@@ -284,7 +280,7 @@ class TermstatusAccessTestCase extends TermstatusWebTestCase {
     $this->backdropGet('taxonomy/term/' . $this->unpublishedTerm->tid);
     $this->assertResponse(200, 'Admin can access unpublished term');
 
-    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->vid);
+    $this->backdropGet('termstatus-test-term-list/' . $this->vocabulary->machine_name);
     $this->assertLinkByHref('taxonomy/term/' . $this->publishedTerm->tid, 0, 'Published term is in term listing for admin');
     $this->assertLinkByHref('taxonomy/term/' . $this->unpublishedTerm->tid, 0, 'Unpublished term is in term listing for admin');
   }
@@ -381,6 +377,7 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
   public function setUp() {
     parent::setUp(array('termstatus'));
     config_set('termstatus.settings', 'termstatus_enable', 1);
+    config_set('termstatus.settings', 'termstatus_default', ['tags' => 1]);
 
     $this->vocabulary = taxonomy_vocabulary_machine_name_load('tags');
 
@@ -389,6 +386,7 @@ class TermstatusQueryTagTestCase extends TermstatusWebTestCase {
     config_set('termstatus.settings', 'termstatus_default', $defaults);
     $this->publishedTerm = $this->createTerm($this->vocabulary);
     $defaults['tags'] = 0;
+    $this->unpublishedTerm = $this->createTerm($this->vocabulary);
     config_set('termstatus.settings', 'termstatus_default', $defaults);
   }
 

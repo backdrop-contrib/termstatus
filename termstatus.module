@@ -17,17 +17,6 @@ function termstatus_config_info() {
 }
 
 /**
- * Implements hook_help().
- */
-function termstatus_help($path, $arg) {
-  switch ($path) {
-    // Main module help for the block module.
-    case 'admin/help#termstatus':
-      return '<p>' . t('Provides a checkbox on the term edit form in order to set the publishing state.') . '</p>';
-  }
-}
-
-/**
  * Implements hook_menu().
  */
 function termstatus_menu() {
